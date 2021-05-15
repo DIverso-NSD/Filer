@@ -66,7 +66,7 @@ async def upload(
     file = await redis.load_data(file_id)
 
     if file["received_bytes"] + len(file_data) != last_byte:
-        return {"message": "чел"}
+        return {"message": "Invalid data chunk"}
 
     if file["status"] == "done":
         return {"message": "Already uploaded"}
