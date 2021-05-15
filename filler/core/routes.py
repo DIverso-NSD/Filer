@@ -54,6 +54,7 @@ async def declare_upload(
 @router.put("/files/{file_id}")
 async def upload(
     file_id: str,
+    last_byte: int,
     file_data: bytes = File(...),
     user: User = Depends(verify_token),
 ):
@@ -63,6 +64,9 @@ async def upload(
 
     logger.info(f"Recieved {len(file_data)} bytes")
     file = await redis.load_data(file_id)
+
+    if file["received_bytes"] + len(file_data) != last_byte:
+        return {"message": "чел"}
 
     if file["status"] == "done":
         return {"message": "Already uploaded"}
@@ -74,8 +78,7 @@ async def upload(
         return {"error": "data that has been sent is too big"}
 
     await storage.save(file_id + file["file_extension"], file_data)
-    print(file["received_bytes"] + len(file_data))
-    print(file["file_size"] - buf)
+
     if file["received_bytes"] + len(file_data) >= file["file_size"] - buf:
         await psql.patch_file_record("done", file_id)
         await redis.dump_data(
@@ -104,4 +107,6 @@ async def upload(
         },
     )
 
-    return {"message": f"Uploaded {len(file_data)} for {file_id}"}
+    return {
+        "message": f"Keep going {len(file_data)} of {file['file_size']} for {file_id}"
+    }

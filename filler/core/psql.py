@@ -36,7 +36,7 @@ async def create_file_record(
         )
 
 
-async def patch_file_record(id: int, status: str) -> asyncpg.Record:
+async def patch_file_record(status: str, id: str) -> asyncpg.Record:
     async with db_connect() as conn:
         return await conn.execute(
             "update files set status=$1 where id=$2",
