@@ -14,6 +14,9 @@ from filler.core import psql
 router = APIRouter()
 
 
+buf = 100
+
+
 @router.post("/files", status_code=201)
 async def declare_upload(
     file: FileData,
@@ -57,6 +60,7 @@ async def upload(
     """
     Gets file_name and download bytes to drive with its name
     """
+
     logger.info(f"Recieved {len(file_data)} bytes")
     file = await redis.load_data(file_id)
 
@@ -66,8 +70,38 @@ async def upload(
     if file["status"] == "created":
         await psql.patch_file_record("loading", file_id)
 
+    if file["file_size"] + buf < file["received_bytes"] + len(file_data):
+        return {"error": "data that has been sent is too big"}
+
     await storage.save(file_id + file["file_extension"], file_data)
-    if file["received_bytes"] + len(file_data) >= file["file_size"]:
+    print(file["received_bytes"] + len(file_data))
+    print(file["file_size"] - buf)
+    if file["received_bytes"] + len(file_data) >= file["file_size"] - buf:
         await psql.patch_file_record("done", file_id)
+        await redis.dump_data(
+            file_id,
+            {
+                "file_name": file["file_name"],
+                "file_extension": file["file_extension"],
+                "file_size": file["file_size"],
+                "record_dt": str(datetime.now().isoformat()),
+                "received_bytes": file["received_bytes"] + len(file_data),
+                "owner_id": user.id,
+                "status": "done",
+            },
+        )
+        return {"message": "finally uploaded"}
+    await redis.dump_data(
+        file_id,
+        {
+            "file_name": file["file_name"],
+            "file_extension": file["file_extension"],
+            "file_size": file["file_size"],
+            "record_dt": str(datetime.now().isoformat()),
+            "received_bytes": file["received_bytes"] + len(file_data),
+            "owner_id": user.id,
+            "status": "loading",
+        },
+    )
 
     return {"message": f"Uploaded {len(file_data)} for {file_id}"}
