@@ -43,7 +43,7 @@ async def declare_upload(
     await psql.create_file_record(
         file_id, file.file_name, file.file_size, "created", user.id
     )
-    logger.info(f"Was created {file_id}")
+    logger.info(f"Was created {file.file_name}")
 
     return {"file_id": file_id}
 
@@ -51,23 +51,40 @@ async def declare_upload(
 @router.put("/files/{file_id}")
 async def upload(
     file_id: str,
+    last_byte: int,
     file_data: bytes = File(...),
     user: User = Depends(verify_token),
 ):
     """
     Gets file_name and download bytes to drive with its name
     """
+
     logger.info(f"Recieved {len(file_data)} bytes")
     file = await redis.load_data(file_id)
 
     if file["status"] == "done":
         return {"message": "Already uploaded"}
 
+    if file["received_bytes"] + len(file_data) != last_byte:
+        return {"message": "Invalid data chunk"}
+
     if file["status"] == "created":
         await psql.patch_file_record("loading", file_id)
 
     await storage.save(file_id + file["file_extension"], file_data)
-    if file["received_bytes"] + len(file_data) >= file["file_size"]:
+
+    if file["received_bytes"] + len(file_data) == file["file_size"]:
         await psql.patch_file_record("done", file_id)
 
-    return {"message": f"Uploaded {len(file_data)} for {file_id}"}
+        file["received_bytes"] = file["received_bytes"] + len(file_data)
+        file["status"] = "done"
+        await redis.dump_data(file_id, file)
+
+        return {"message": f"File {file['file_name']} uploaded"}
+
+    file["received_bytes"] = file["received_bytes"] + len(file_data)
+    await redis.dump_data(file_id, file)
+
+    return {
+        "message": f"Keep going {len(file_data)} of {file['file_size']} for {file_id}"
+    }
