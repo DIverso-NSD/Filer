@@ -14,14 +14,16 @@ router = APIRouter()
 
 
 @router.post("/files", status_code=201)
-async def declare_upload(file: FileData, user: User = Depends(verify_token)):
+async def declare_upload(
+    file: FileData,
+    user: User = Depends(verify_token),
+):
     """
     Says server to create file with random id and returns this id
     """
 
     file_id = str(uuid.uuid4().hex)
     file_extension = file.file_name.split(".")[-1]
-    print(user)
 
     await redis.dump_data(
         file_id,
@@ -45,6 +47,7 @@ async def declare_upload(file: FileData, user: User = Depends(verify_token)):
 async def upload(
     file_id: str,
     file_data: bytes = File(...),
+    user: User = Depends(verify_token),
 ):
     """
     Gets file_name and download bytes to drive with its name
