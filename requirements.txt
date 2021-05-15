@@ -6,3 +6,4 @@ pydantic[dotenv]
 loguru
 ujson
 python-multipart
+pyjwt
