@@ -62,17 +62,14 @@ async def upload(
     logger.info(f"Recieved {len(file_data)} bytes")
     file = await redis.load_data(file_id)
 
-    if file["received_bytes"] + len(file_data) != last_byte:
-        return {"message": "Invalid data chunk"}
-
     if file["status"] == "done":
         return {"message": "Already uploaded"}
 
+    if file["received_bytes"] + len(file_data) != last_byte:
+        return {"message": "Invalid data chunk"}
+
     if file["status"] == "created":
         await psql.patch_file_record("loading", file_id)
-
-    if file["file_size"] < file["received_bytes"] + len(file_data):
-        return {"error": "data that has been sent is too big"}
 
     await storage.save(file_id + file["file_extension"], file_data)
 
@@ -83,7 +80,7 @@ async def upload(
         file["status"] = "done"
         await redis.dump_data(file_id, file)
 
-        return {"message": "finally uploaded"}
+        return {"message": f"File {file['file_name']} uploaded"}
 
     file["received_bytes"] = file["received_bytes"] + len(file_data)
     await redis.dump_data(file_id, file)
