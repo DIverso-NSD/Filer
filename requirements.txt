@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+aiofile
+aioredis
+pydantic[dotenv]
+loguru
+ujson
+python-multipart
