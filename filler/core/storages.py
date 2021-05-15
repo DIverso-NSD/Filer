@@ -22,11 +22,9 @@ class LocalStorage(ABCUploader):
         pass
 
     @staticmethod
-    async def save(file_name: str, data: bytes):
-        async with AIOFile(
-            f"{settings.files_folder}/{file_name}.mp4", mode="ab"
-        ) as file:
-            await file.write(data)
+    async def save(file_name: str, data: bytes, offset: int):
+        async with AIOFile(f"{settings.files_folder}/{file_name}", mode="ab") as file:
+            await file.write(data, offset=offset)
             await file.fsync()
             logger.info(f"Writing in the {file_name}")
 

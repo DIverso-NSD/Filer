@@ -71,7 +71,9 @@ async def upload(
     if file["status"] == "created":
         await psql.patch_file_record("loading", file_id)
 
-    await storage.save(file_id + file["file_extension"], file_data)
+    await storage.save(
+        f'{file_id}.{file["file_extension"]}', file_data, file["received_bytes"]
+    )
 
     if file["received_bytes"] + len(file_data) == file["file_size"]:
         await psql.patch_file_record("done", file_id)
@@ -86,5 +88,5 @@ async def upload(
     await redis.dump_data(file_id, file)
 
     return {
-        "message": f"Keep going {len(file_data)} of {file['file_size']} for {file_id}"
+        "message": f"Keep going {file['received_bytes']} of {file['file_size']} for {file_id}"
     }
