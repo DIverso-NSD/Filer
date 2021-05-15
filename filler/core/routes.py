@@ -40,7 +40,9 @@ async def declare_upload(
     )
 
     await storage.declare_upload(file_id)
-    await psql.create_file_record(file.file_name, file.file_size, "created", user.id)
+    await psql.create_file_record(
+        file_id, file.file_name, file.file_size, "created", user.id
+    )
     logger.info(f"Was created {file_id}")
 
     return {"file_id": file_id}

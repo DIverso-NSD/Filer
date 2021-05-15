@@ -14,7 +14,7 @@ async def db_connect():
         await conn.close()
 
 
-async def get_user(id: str) -> asyncpg.Record:
+async def get_user(id: int) -> asyncpg.Record:
     async with db_connect() as conn:
         return await conn.fetchrow(
             "select * from user where id=$1",
@@ -23,11 +23,12 @@ async def get_user(id: str) -> asyncpg.Record:
 
 
 async def create_file_record(
-    name: str, size: str, status: str, user_id: str
+    file_id: str, name: str, size: int, status: str, user_id: int
 ) -> asyncpg.Record:
     async with db_connect() as conn:
         return await conn.execute(
-            "insert into files (name, size, status, user_id) values($1, $2, $3, $4)",
+            "insert into files (id, name, size, status, user_id) values($1, $2, $3, $4, $5)",
+            file_id,
             name,
             size,
             status,
@@ -35,7 +36,7 @@ async def create_file_record(
         )
 
 
-async def patch_file_record(id: str, status: str) -> asyncpg.Record:
+async def patch_file_record(id: int, status: str) -> asyncpg.Record:
     async with db_connect() as conn:
         return await conn.execute(
             "update files set status=$1 where id=$2",
