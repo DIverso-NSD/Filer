@@ -74,34 +74,17 @@ async def upload(
         return {"error": "data that has been sent is too big"}
 
     await storage.save(file_id + file["file_extension"], file_data)
-    print(file["received_bytes"] + len(file_data))
-    print(file["file_size"] - buf)
+
     if file["received_bytes"] + len(file_data) >= file["file_size"] - buf:
         await psql.patch_file_record("done", file_id)
-        await redis.dump_data(
-            file_id,
-            {
-                "file_name": file["file_name"],
-                "file_extension": file["file_extension"],
-                "file_size": file["file_size"],
-                "record_dt": str(datetime.now().isoformat()),
-                "received_bytes": file["received_bytes"] + len(file_data),
-                "owner_id": user.id,
-                "status": "done",
-            },
-        )
+
+        file["received_bytes"] = file["received_bytes"] + len(file_data)
+        file["status"] = "done"
+        await redis.dump_data(file_id, file)
+
         return {"message": "finally uploaded"}
-    await redis.dump_data(
-        file_id,
-        {
-            "file_name": file["file_name"],
-            "file_extension": file["file_extension"],
-            "file_size": file["file_size"],
-            "record_dt": str(datetime.now().isoformat()),
-            "received_bytes": file["received_bytes"] + len(file_data),
-            "owner_id": user.id,
-            "status": "loading",
-        },
-    )
+
+    file["received_bytes"] = file["received_bytes"] + len(file_data)
+    await redis.dump_data(file_id, file)
 
     return {"message": f"Uploaded {len(file_data)} for {file_id}"}
