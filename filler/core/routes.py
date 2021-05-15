@@ -14,9 +14,6 @@ from filler.core import psql
 router = APIRouter()
 
 
-buf = 100
-
-
 @router.post("/files", status_code=201)
 async def declare_upload(
     file: FileData,
@@ -74,12 +71,12 @@ async def upload(
     if file["status"] == "created":
         await psql.patch_file_record("loading", file_id)
 
-    if file["file_size"] + buf < file["received_bytes"] + len(file_data):
+    if file["file_size"] < file["received_bytes"] + len(file_data):
         return {"error": "data that has been sent is too big"}
 
     await storage.save(file_id + file["file_extension"], file_data)
 
-    if file["received_bytes"] + len(file_data) >= file["file_size"] - buf:
+    if file["received_bytes"] + len(file_data) == file["file_size"]:
         await psql.patch_file_record("done", file_id)
 
         file["received_bytes"] = file["received_bytes"] + len(file_data)
